@@ -1,65 +1,162 @@
-import Image from "next/image";
+// src/app/page.tsx
+import { getFoodDrinkItems } from "@/lib/db";
 
-export default function Home() {
+export default async function Page() {
+  // Define a local type for the rows returned by getFoodDrinkItems (so we don't use `any`)
+  type FoodDrinkItem = {
+    id: string | number;
+    name: string;
+    city?: string;
+    location?: string;
+    cuisine?: string;
+    website?: string;
+    hats?: string | number;
+    price_range_per_head?: string;
+    comment?: string;
+  };
+
+  const items = (await getFoodDrinkItems()) as FoodDrinkItem[];
+
+  const melbourne = items.filter((i) => i.city === "Melbourne");
+  const sydney = items.filter((i) => (i.city ?? "").toLowerCase() === "sydney");
+  const adelaide = items.filter(
+    (i) => i.city === "Adelaide" || i.city === "Adelaide SA"
+  );
+
+  const renderTable = (rows: any[]) => {
+    if (!rows.length) {
+      return (
+        <p className="text-sm text-slate-500">
+          No rows found in <code>food_drink_items</code> for this city.
+        </p>
+      );
+    }
+
+    return (
+      <div className="overflow-x-auto rounded-md border border-slate-200 bg-white text-sm">
+        <table className="min-w-full border-collapse">
+          <thead className="bg-slate-50">
+            <tr className="border-b border-slate-200">
+              <th className="px-3 py-2 text-left font-medium text-slate-600">
+                Name
+              </th>
+              <th className="px-3 py-2 text-left font-medium text-slate-600">
+                Location
+              </th>
+              <th className="px-3 py-2 text-left font-medium text-slate-600">
+                Cusine
+              </th>
+              <th className="px-3 py-2 text-left font-medium text-slate-600">
+                Website
+              </th>
+              <th className="px-3 py-2 text-left font-medium text-slate-600">
+                Hats
+              </th>
+              <th className="px-3 py-2 text-left font-medium text-slate-600 whitespace-nowrap">
+                Price Range Per Head
+              </th>
+              <th className="px-3 py-2 text-left font-medium text-slate-600">
+                Comment
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((item) => (
+              <tr
+                key={item.id}
+                className="border-t border-slate-100 align-top"
+              >
+                <td className="px-3 py-2 font-medium text-slate-900">
+                  {item.name}
+                </td>
+                <td className="px-3 py-2 text-slate-700">
+                  {item.location || ""}
+                </td>
+                <td className="px-3 py-2 text-slate-700">
+                  {item.cuisine || item.Cusine || ""}
+                </td>
+                <td className="px-3 py-2 text-slate-700">
+                  {item.website ? (
+                    <a
+                      href={item.website}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-sky-600 underline-offset-2 hover:underline break-all"
+                    >
+                      {item.website}
+                    </a>
+                  ) : (
+                    ""
+                  )}
+                </td>
+                <td className="px-3 py-2 text-slate-700">
+                  {item.hats ?? item.Hats ?? ""}
+                </td>
+                <td className="px-3 py-2 text-slate-700 whitespace-nowrap">
+                  {item.price_range_per_head ??
+                    item["Price Range Per Head"] ??
+                    ""}
+                </td>
+                <td className="px-3 py-2 text-slate-700 whitespace-pre-wrap">
+                  {item.comment ?? item.Comment ?? ""}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <main className="min-h-screen bg-[#fbfbfb]">
+      <div className="mx-auto max-w-5xl px-4 py-10 space-y-10">
+        {/* Header */}
+        <header className="mb-4">
+          <div className="mb-3 text-4xl">🇦🇺</div>
+          <h1 className="text-3xl font-semibold mb-1">
+            Australia – Food &amp; Drink List
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="text-sm text-slate-500">
+            Read-only view backed by <code>food_drink_items</code>{" "}
+            in Postgres. Each city is shown as a separate table.
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+        </header>
+
+        {/* Melbourne table */}
+        <section className="space-y-3">
+          <div>
+            <h2 className="text-xl font-semibold">Melbourne / Victoria</h2>
+            <p className="text-sm text-slate-500">
+              Data filtered where <code>city = &quot;Melbourne&quot;</code>.
+            </p>
+          </div>
+          {renderTable(melbourne)}
+        </section>
+
+        {/* Sydney table */}
+        <section className="space-y-3">
+          <div>
+            <h2 className="text-xl font-semibold">Sydney / NSW</h2>
+            <p className="text-sm text-slate-500">
+              Data filtered where <code>city = &quot;Sydney&quot;</code>.
+            </p>
+          </div>
+          {renderTable(sydney)}
+        </section>
+
+        {/* Adelaide table */}
+        <section className="space-y-3 pb-12">
+          <div>
+            <h2 className="text-xl font-semibold">Adelaide / SA</h2>
+            <p className="text-sm text-slate-500">
+              Data filtered where <code>city = &quot;Adelaide&quot;</code> or{" "}
+              <code>&quot;Adelaide SA&quot;</code>.
+            </p>
+          </div>
+          {renderTable(adelaide)}
+        </section>
+      </div>
+    </main>
   );
 }
