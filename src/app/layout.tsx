@@ -1,10 +1,14 @@
 // src/app/layout.tsx
 import type { Metadata } from "next";
 import "./globals.css";
+import { ThemeProvider } from "../components/theme-provider";
+import { Inter } from "next/font/google";
+
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Food & Drink List",
-  description: "A Notion-style food & drink database powered by Next.js, React Compiler & Vercel Postgres.",
+  title: "Foodie Notes",
+  description: "Your food & drink notes.",
 };
 
 export default function RootLayout({
@@ -13,8 +17,28 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="scroll-smooth">
-      <body>{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <body
+        className={`
+          min-h-screen antialiased
+          bg-slate-50 text-slate-900
+          dark:bg-slate-950 dark:text-slate-100
+          ${inter.className}
+        `}
+      >
+        <ThemeProvider>
+          <div
+            className={`
+              min-h-screen
+              bg-gradient-to-b
+              from-orange-50/70 via-amber-50/40 to-rose-50/70
+              dark:from-slate-950 dark:via-slate-950 dark:to-slate-900
+            `}
+          >
+            {children}
+          </div>
+        </ThemeProvider>
+      </body>
     </html>
   );
 }

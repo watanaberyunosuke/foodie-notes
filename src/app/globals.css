@@ -1,9 +1,8 @@
-/* Tailwind v4 style */
 @import "tailwindcss";
 
-/* Optional: if you ever need explicit order:
-   @layer base, components, utilities;
-*/
+/* Tell Tailwind: `dark:` variants should respond to `.dark` class */
+@custom-variant dark (&:where(.dark, .dark *));
+
 
 /* Use base layer for global element styles */
 @layer base {
