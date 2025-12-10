@@ -51,7 +51,8 @@ export default function FoodDrinkPageClient({ items }: Props) {
         className="
           relative
           max-h-[70vh]
-          overflow-auto
+          overflow-x-auto
+          overflow-y-auto
           rounded-xl
           border border-slate-200 bg-white/90
           shadow-sm
@@ -155,11 +156,24 @@ export default function FoodDrinkPageClient({ items }: Props) {
     );
   };
 
+  // Table of contents entries
+  const tocItems = [
+    { id: "melbourne", label: "Melbourne / Victoria", count: melbourne.length },
+    { id: "sydney", label: "Sydney / NSW", count: sydney.length },
+    { id: "adelaide", label: "Adelaide / SA", count: adelaide.length },
+  ];
+
+  const handleScrollTo = (id: string) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return (
-    <main className="min-h-screen bg-[#fbfbfb] dark:bg-slate-950 overflow-y-auto">
+    <main className="h-screen overflow-y-auto bg-[#fbfbfb] dark:bg-slate-950">
       <div className="mx-auto max-w-5xl px-4 py-10 space-y-10">
-        {/* Header with top-right toggle */}
-        <header className="mb-4 flex items-start justify-between gap-4">
+        {/* Header */}
+        <header className="mb-6 flex items-start justify-between gap-4">
           <div>
             <div className="mb-3 text-4xl">🇦🇺</div>
             <h1 className="text-3xl font-semibold mb-1 text-slate-900 dark:text-slate-100">
@@ -176,46 +190,82 @@ export default function FoodDrinkPageClient({ items }: Props) {
           </div>
         </header>
 
-        {/* Melbourne card */}
-        <ToggleSection
-          id="melbourne"
-          title="Melbourne / Victoria"
-          description={
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Data where <code>city = &quot;Melbourne&quot;</code>.
-            </p>
-          }
-        >
-          {renderTable(melbourne)}
-        </ToggleSection>
+        {/* Layout: TOC + content */}
+        <div className="flex gap-8">
+          {/* TOC sidebar – always visible, on the left */}
+          <aside className="w-52 shrink-0">
+            <div className="sticky top-24 space-y-3">
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                Cities
+              </h2>
+              <nav className="space-y-1">
+                {tocItems.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => handleScrollTo(item.id)}
+                    className="
+                      w-full text-left text-sm
+                      rounded-md px-2.5 py-1.5
+                      text-slate-700 dark:text-slate-200
+                      hover:bg-slate-100 dark:hover:bg-slate-800
+                      transition
+                    "
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span>{item.label}</span>
+                      <span className="text-[0.7rem] font-mono text-slate-400 dark:text-slate-500">
+                        {item.count || 0}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </nav>
+            </div>
+          </aside>
 
-        {/* Sydney card */}
-        <ToggleSection
-          id="sydney"
-          title="Sydney / NSW"
-          description={
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Data where <code>city = &quot;Sydney&quot;</code>.
-            </p>
-          }
-        >
-          {renderTable(sydney)}
-        </ToggleSection>
+          {/* Main content: sections on the right */}
+          <div className="flex-1 space-y-8">
+            <ToggleSection
+              id="melbourne"
+              title="Melbourne / Victoria"
+              description={
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Data where <code>city = &quot;Melbourne&quot;</code>.
+                </p>
+              }
+            >
+              {renderTable(melbourne)}
+            </ToggleSection>
 
-        {/* Adelaide card */}
-        <ToggleSection
-          id="adelaide"
-          title="Adelaide / SA"
-          description={
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Data where <code>city = &quot;Adelaide&quot;</code> or{" "}
-              <code>&quot;Adelaide SA&quot;</code>.
-            </p>
-          }
-        >
-          {renderTable(adelaide)}
-        </ToggleSection>
+            <ToggleSection
+              id="sydney"
+              title="Sydney / NSW"
+              description={
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Data where <code>city = &quot;Sydney&quot;</code>.
+                </p>
+              }
+            >
+              {renderTable(sydney)}
+            </ToggleSection>
+
+            <ToggleSection
+              id="adelaide"
+              title="Adelaide / SA"
+              description={
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Data where <code>city = &quot;Adelaide&quot;</code> or{" "}
+                  <code>&quot;Adelaide SA&quot;</code>.
+                </p>
+              }
+            >
+              {renderTable(adelaide)}
+            </ToggleSection>
+          </div>
+        </div>
       </div>
     </main>
   );
+
 }
