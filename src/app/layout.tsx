@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { ThemeProviders } from "./theme-providers";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics } from "@vercel/analytics/next"
 
 export const metadata: Metadata = {
   title: "Foodie Notes",
@@ -19,6 +20,7 @@ export default function RootLayout({
       <body>
         <ThemeProviders>{children}</ThemeProviders>
         <SpeedInsights />
+        <Analytics />
       </body>
     </html>
   );
