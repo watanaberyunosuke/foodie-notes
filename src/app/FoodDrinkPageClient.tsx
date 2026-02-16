@@ -47,26 +47,9 @@ export default function FoodDrinkPageClient({ items }: Props) {
     }
 
     return (
-      <div
-        className="
-          relative
-          max-h-[70vh]
-          overflow-x-auto
-          overflow-y-auto
-          rounded-xl
-          border border-slate-200 bg-white/90
-          shadow-sm
-          dark:border-slate-800 dark:bg-slate-900/90
-        "
-      >
+      <div className="relative max-h-[70vh] overflow-x-auto overflow-y-auto rounded-xl border border-slate-200 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
         <table className="min-w-full border-collapse text-sm">
-          <thead
-            className="
-              sticky top-0 z-10
-              bg-slate-50/95 dark:bg-slate-800/95
-              backdrop-blur
-            "
-          >
+          <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur dark:bg-slate-800/95">
             <tr className="border-b border-slate-200 dark:border-slate-700">
               {[
                 "Name",
@@ -79,11 +62,7 @@ export default function FoodDrinkPageClient({ items }: Props) {
               ].map((col) => (
                 <th
                   key={col}
-                  className="
-                    px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide
-                    text-slate-600 dark:text-slate-300
-                    whitespace-nowrap
-                  "
+                  className="whitespace-nowrap px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300"
                 >
                   {col}
                 </th>
@@ -95,11 +74,7 @@ export default function FoodDrinkPageClient({ items }: Props) {
             {rows.map((item) => (
               <tr
                 key={item.id}
-                className="
-                  border-t border-slate-100 dark:border-slate-800
-                  hover:bg-slate-50/80 dark:hover:bg-slate-800/70
-                  align-top
-                "
+                className="align-top border-t border-slate-100 hover:bg-slate-50/80 dark:border-slate-800 dark:hover:bg-slate-800/70"
               >
                 <td className="px-3 py-2 font-medium text-slate-900 dark:text-slate-100">
                   {item.name}
@@ -119,13 +94,7 @@ export default function FoodDrinkPageClient({ items }: Props) {
                       href={item.website}
                       target="_blank"
                       rel="noreferrer"
-                      className="
-                        inline-block
-                        max-w-[14rem] sm:max-w-xs
-                        truncate
-                        text-sky-600 dark:text-sky-400
-                        underline-offset-2 hover:underline
-                      "
+                      className="inline-block max-w-[14rem] truncate text-sky-600 underline-offset-2 hover:underline dark:text-sky-400 sm:max-w-xs"
                       title={item.website}
                     >
                       {formatUrlText(item.website)}
@@ -204,13 +173,7 @@ export default function FoodDrinkPageClient({ items }: Props) {
                     key={item.id}
                     type="button"
                     onClick={() => handleScrollTo(item.id)}
-                    className="
-                      w-full text-left text-sm
-                      rounded-md px-2.5 py-1.5
-                      text-slate-700 dark:text-slate-200
-                      hover:bg-slate-100 dark:hover:bg-slate-800
-                      transition
-                    "
+                    className="w-full rounded-md px-2.5 py-1.5 text-left text-sm text-slate-700 transition hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span>{item.label}</span>

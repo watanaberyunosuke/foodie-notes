@@ -2,8 +2,6 @@
 "use client";
 
 import { useState, ReactNode } from "react";
-import IconButton from "@mui/material/IconButton";
-import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 
 type ToggleSectionProps = {
   id: string;              // now required, used for anchor + TOC
@@ -24,11 +22,7 @@ export function ToggleSection({
   return (
     <section
       id={id}
-      className="
-        rounded-2xl border border-slate-200/80 bg-white/90 shadow-md
-        dark:border-slate-800/80 dark:bg-slate-900/90
-        p-4 sm:p-6 space-y-3
-      "
+      className="space-y-3 rounded-2xl border border-slate-200/80 bg-white/90 p-4 shadow-md dark:border-slate-800/80 dark:bg-slate-900/90 sm:p-6"
     >
       {/* Header */}
       <div className="flex items-start justify-between">
@@ -39,27 +33,24 @@ export function ToggleSection({
           {description}
         </div>
 
-        {/* Material UI arrow toggle */}
-        <IconButton
+        <button
+          type="button"
           onClick={() => setOpen((o) => !o)}
-          size="small"
           aria-label={`Toggle ${title}`}
-          sx={{
-            transition: "transform 0.25s ease",
-            transform: open ? "rotate(90deg)" : "rotate(0deg)",
-            color: "text.secondary",
-          }}
+          className="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 dark:hover:text-white"
         >
-          <KeyboardArrowRightIcon fontSize="medium" />
-        </IconButton>
+          <span
+            className={`text-lg leading-none transition-transform duration-200 ${open ? "rotate-90" : "rotate-0"}`}
+            aria-hidden="true"
+          >
+            ▸
+          </span>
+        </button>
       </div>
 
       {/* Animated expand/collapse */}
       <div
-        className={`
-          grid transition-all duration-300 ease-out
-          ${open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}
-        `}
+        className={`grid transition-all duration-300 ease-out ${open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
       >
         <div className="overflow-hidden">
           {children}
