@@ -3,6 +3,7 @@
 
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ToggleSection } from "@/components/ToggleSection";
+import { useState } from "react";
 
 type FoodDrinkItem = {
   id: string | number;
@@ -26,9 +27,41 @@ type Props = {
 };
 
 export default function FoodDrinkPageClient({ items }: Readonly<Props>) {
-  const melbourne = items.filter((i) => i.city === "Melbourne");
-  const sydney = items.filter((i) => (i.city ?? "").toLowerCase() === "sydney");
-  const adelaide = items.filter(
+  const [searchQuery, setSearchQuery] = useState("");
+  const [cuisineFilter, setCuisineFilter] = useState("");
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+
+  const handleSectionToggle = (id: string, isOpen: boolean) => {
+    setExpandedSections((prev) => ({ ...prev, [id]: isOpen }));
+  };
+  const isAnySectionExpanded = Object.values(expandedSections).some(Boolean);
+
+  const uniqueCuisines = Array.from(
+    new Set(
+      items
+        .map((i) => (i.cuisine || i.Cusine || "").trim())
+        .filter((c) => c !== "" && c !== "—")
+    )
+  ).sort((a, b) => a.localeCompare(b));
+
+  const filteredItems = items.filter((item) => {
+    const itemCuisine = (item.cuisine || item.Cusine || "").trim();
+    const matchesCuisine = !cuisineFilter || itemCuisine === cuisineFilter;
+    
+    if (!matchesCuisine) return false;
+
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    const name = (item.name || "").toLowerCase();
+    const loc = (item.location || "").toLowerCase();
+    const note = (item.comment || item.Comment || "").toLowerCase();
+
+    return name.includes(q) || loc.includes(q) || note.includes(q);
+  });
+
+  const melbourne = filteredItems.filter((i) => i.city === "Melbourne");
+  const sydney = filteredItems.filter((i) => (i.city ?? "").toLowerCase() === "sydney");
+  const adelaide = filteredItems.filter(
     (i) => i.city === "Adelaide" || i.city === "Adelaide SA"
   );
 
@@ -147,60 +180,103 @@ export default function FoodDrinkPageClient({ items }: Readonly<Props>) {
   };
 
   return (
-    <main className="min-h-screen py-10 sm:py-16">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 space-y-12 relative z-10">
-        {/* Header */}
-        <header className="mb-10 flex flex-col sm:flex-row sm:items-end justify-between gap-6 minimal-card rounded-3xl p-6 sm:p-8">
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-3 mb-2">
-              <span className="inline-flex items-center rounded-full bg-slate-100 dark:bg-neutral-800 px-3 py-1 text-xs font-semibold text-slate-800 dark:text-neutral-200 ring-1 ring-inset ring-slate-200 dark:ring-neutral-700">
-                Curated Selection
-              </span>
+    <div className="flex min-h-screen bg-transparent font-sans selection:bg-cyan-200 selection:text-cyan-900 dark:selection:bg-cyan-900 dark:selection:text-cyan-100">
+      {/* TOC Fluid Sidebar */}
+      <aside
+        className={`sticky top-0 h-screen shrink-0 border-r border-slate-200/50 dark:border-white/5 bg-white/60 dark:bg-neutral-900/50 backdrop-blur-3xl transition-all duration-800 ease-[cubic-bezier(0.16,1,0.3,1)] flex flex-col z-20 ${
+          isAnySectionExpanded
+            ? "w-0 opacity-0 -translate-x-8 overflow-hidden"
+            : "w-[280px] opacity-100 translate-x-0 overflow-y-auto"
+        }`}
+      >
+        <div className="flex flex-col h-full p-8">
+          <nav className="space-y-3 flex flex-col mt-4">
+            <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-neutral-500 mb-4 pl-3">
+              Destinations
+            </h2>
+            {tocItems.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => handleScrollTo(item.id)}
+                className="group relative w-full flex items-center justify-between rounded-3xl px-4 py-3.5 text-sm font-medium text-slate-700 transition-all duration-300 hover:bg-white/80 dark:hover:bg-white/10 hover:shadow-[0_4px_20px_rgb(0,0,0,0.03)] hover:ring-1 hover:ring-black/5 dark:hover:ring-white/10 dark:text-neutral-300 text-left outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+              >
+                <span className="relative z-10 transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-x-1">{item.label}</span>
+                <span className="relative z-10 inline-flex items-center justify-center rounded-full bg-slate-200/50 dark:bg-black/20 shadow-sm px-2.5 py-1 text-xs font-semibold text-slate-500 dark:text-neutral-400 transition-colors border border-transparent dark:border-white/5 group-hover:bg-white group-hover:text-slate-900 dark:group-hover:bg-white/20 dark:group-hover:text-white">
+                  {item.count || 0}
+                </span>
+              </button>
+            ))}
+          </nav>
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <main className={`flex-1 w-full min-w-0 transition-all duration-800 ease-[cubic-bezier(0.16,1,0.3,1)] relative z-10 ${
+          isAnySectionExpanded ? "max-w-7xl mx-auto" : ""
+        }`}
+      >
+        <div className="mx-auto max-w-5xl px-6 sm:px-12 py-16 sm:py-24 space-y-16">
+          {/* Header */}
+          <header className="flex flex-col gap-6">
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <span className="inline-flex items-center rounded-full bg-white/80 dark:bg-white/5 px-4 py-1.5 text-xs font-semibold text-slate-800 dark:text-neutral-200 ring-1 ring-inset ring-slate-200/50 dark:ring-white/10 shadow-sm backdrop-blur-md">
+                  Curated Selection
+                </span>
+                <ThemeToggle />
+              </div>
+              <h1 className="text-5xl sm:text-6xl font-extrabold tracking-tight pb-2 bg-clip-text text-transparent bg-linear-to-br from-slate-900 to-slate-500 dark:from-white dark:to-neutral-400">
+                Food &amp; Drink Notes
+              </h1>
+              <p className="text-lg text-slate-600 dark:text-neutral-400 max-w-2xl leading-relaxed">
+                A carefully maintained list of the best places across Australia. Powered by <strong>Postgres</strong>.
+              </p>
             </div>
-            <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-slate-900 dark:text-slate-100 pb-1">
-              Food &amp; Drink Notes
-            </h1>
-            <p className="text-base text-slate-600 dark:text-neutral-400 max-w-xl">
-              A carefully maintained list of the best places across Australia. Powered by <strong>Postgres</strong>.
-            </p>
-          </div>
+          </header>
 
-          <div className="sm:pb-2">
-            <ThemeToggle />
-          </div>
-        </header>
-
-        {/* Layout: TOC + content */}
-        <div className="flex flex-col md:flex-row gap-8 lg:gap-12">
-          {/* TOC sidebar */}
-          <aside className="w-full md:w-64 shrink-0">
-            <div className="sticky top-8 space-y-6 minimal-card rounded-3xl p-5">
-              <h2 className="text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-neutral-500 pl-2">
-                Destinations
-              </h2>
-              <nav className="space-y-1.5 flex flex-col">
-                {tocItems.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => handleScrollTo(item.id)}
-                    className="group relative w-full flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition-all hover:bg-slate-100 dark:text-neutral-300 dark:hover:bg-neutral-800 hover:text-black dark:hover:text-white text-left outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
-                  >
-                    <span className="relative z-10">{item.label}</span>
-                    <span className="relative z-10 inline-flex items-center justify-center rounded-full bg-slate-100 dark:bg-neutral-800 px-2 py-0.5 text-xs font-medium text-slate-500 dark:text-neutral-400 group-hover:bg-slate-200 group-hover:text-slate-700 dark:group-hover:bg-neutral-700 dark:group-hover:text-neutral-300 transition-colors border border-transparent dark:border-neutral-700/50">
-                      {item.count || 0}
-                    </span>
-                  </button>
+          {/* Search & Filter */}
+          <div className="flex flex-col sm:flex-row gap-5 relative z-10 w-full mb-10">
+            <div className="flex-1 relative group">
+              <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none transition-transform group-focus-within:scale-110 group-focus-within:text-cyan-500">
+                <svg className="w-5 h-5 text-slate-400 dark:text-neutral-500 transition-colors group-focus-within:text-cyan-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              <input
+                type="text"
+                placeholder="Search by name, location, or notes..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full rounded-4xl border border-slate-200/60 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur-md py-4 pl-12 pr-6 text-base text-slate-900 dark:text-white placeholder-slate-400 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500 outline-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)] transition-all duration-300"
+              />
+            </div>
+            <div className="sm:w-72 shrink-0 relative group">
+              <select
+                value={cuisineFilter}
+                onChange={(e) => setCuisineFilter(e.target.value)}
+                className="w-full rounded-4xl border border-slate-200/60 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur-md py-4 pl-6 pr-12 text-base text-slate-900 dark:text-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500 outline-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)] appearance-none cursor-pointer transition-all duration-300"
+              >
+                <option value="">All Cuisines</option>
+                {uniqueCuisines.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
                 ))}
-              </nav>
+              </select>
+              <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none transition-transform group-focus-within:rotate-180">
+                <svg className="w-5 h-5 text-slate-400 dark:text-neutral-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
             </div>
-          </aside>
+          </div>
 
-          {/* Main content: sections on the right */}
-          <div className="flex-1 space-y-8">
+          <div className="space-y-10">
             <ToggleSection
               id="melbourne"
               title="Melbourne / Victoria"
+              onToggle={(isOpen) => handleSectionToggle("melbourne", isOpen)}
               description={
                 <p className="text-sm text-slate-500 dark:text-slate-400">
                   Data where <code>city = &quot;Melbourne&quot;</code>.
@@ -213,6 +289,7 @@ export default function FoodDrinkPageClient({ items }: Readonly<Props>) {
             <ToggleSection
               id="sydney"
               title="Sydney / NSW"
+              onToggle={(isOpen) => handleSectionToggle("sydney", isOpen)}
               description={
                 <p className="text-sm text-slate-500 dark:text-slate-400">
                   Data where <code>city = &quot;Sydney&quot;</code>.
@@ -225,6 +302,7 @@ export default function FoodDrinkPageClient({ items }: Readonly<Props>) {
             <ToggleSection
               id="adelaide"
               title="Adelaide / SA"
+              onToggle={(isOpen) => handleSectionToggle("adelaide", isOpen)}
               description={
                 <p className="text-sm text-slate-500 dark:text-slate-400">
                   Data where <code>city = &quot;Adelaide&quot;</code> or{" "}
@@ -236,8 +314,7 @@ export default function FoodDrinkPageClient({ items }: Readonly<Props>) {
             </ToggleSection>
           </div>
         </div>
-      </div>
-    </main>
+      </main>
+    </div>
   );
-
 }
