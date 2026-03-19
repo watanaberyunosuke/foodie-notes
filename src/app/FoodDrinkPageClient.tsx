@@ -1,6 +1,7 @@
 // src/app/FoodDrinkPageClient.tsx
 "use client";
 
+import { useRouter } from "next/navigation";
 import { verifyPasswordBypass, verifyUserAccess, type VerificationState } from "./actions";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ToggleSection } from "@/components/ToggleSection";
@@ -57,6 +58,7 @@ export default function FoodDrinkPageClient({
   initialVerificationStatus,
   passwordBypassEnabled,
 }: Readonly<Props>) {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [cuisineFilter, setCuisineFilter] = useState("");
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
@@ -156,8 +158,7 @@ export default function FoodDrinkPageClient({
     }
 
     if (isRejectedBackground(selectedBackground)) {
-      setLocalRejectionMessage("We couldn't confirm this request came from a genuine visitor. Please try again.");
-      setHideServerRejectionMessage(true);
+      router.push(`/access-unavailable?background=${encodeURIComponent(selectedBackground)}`);
       return;
     }
 
