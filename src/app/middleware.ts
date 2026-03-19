@@ -1,17 +1,9 @@
-import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { shouldRejectRequest } from "@/middleware/access-control";
-export function appMiddleware(request: NextRequest) {
-  if (shouldRejectRequest(request.headers)) {
-    return new NextResponse("Access unavailable.", {
-      status: 403,
-      headers: {
-        "content-type": "text/plain; charset=utf-8",
-        "cache-control": "no-store",
-      },
-    });
-  }
+import { NextResponse } from "next/server";
 
+export function appMiddleware(request: NextRequest) {
+  void request;
+  // Let the gate page render so a valid access code can bypass the checks.
   return NextResponse.next();
 }
 

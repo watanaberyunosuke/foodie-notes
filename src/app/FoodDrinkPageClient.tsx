@@ -1,7 +1,7 @@
 // src/app/FoodDrinkPageClient.tsx
 "use client";
 
-import { verifyUserAccess, type VerificationState } from "./actions";
+import { verifyPasswordBypass, verifyUserAccess, type VerificationState } from "./actions";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ToggleSection } from "@/components/ToggleSection";
 import { COUNTRY_OPTIONS } from "@/lib/countries";
@@ -35,6 +35,7 @@ type Props = {
   initialCountryCode?: string | null;
   initialAcceptLanguage?: string | null;
   initialVerificationStatus: VerificationStatus;
+  passwordBypassEnabled: boolean;
 };
 
 function getInitialVerificationState(status: VerificationStatus): VerificationState {
@@ -54,6 +55,7 @@ export default function FoodDrinkPageClient({
   initialCountryCode,
   initialAcceptLanguage,
   initialVerificationStatus,
+  passwordBypassEnabled,
 }: Readonly<Props>) {
   const [searchQuery, setSearchQuery] = useState("");
   const [cuisineFilter, setCuisineFilter] = useState("");
@@ -68,15 +70,21 @@ export default function FoodDrinkPageClient({
     verifyUserAccess,
     initialVerificationState,
   );
+  const [passwordState, passwordFormAction, isPasswordPending] = useActionState(
+    verifyPasswordBypass,
+    initialVerificationState,
+  );
   const isTechnicallyRejected =
     isBlockedCountryCode(initialCountryCode) || isBlockedLanguage(initialAcceptLanguage);
-  const accessGranted = !isTechnicallyRejected && verificationState.status === "granted";
+  const accessGranted =
+    verificationState.status === "granted" || passwordState.status === "granted";
   const rejectionMessage = "Access is unavailable.";
   const serverRejectionMessage =
     verificationState.status === "rejected" && !hideServerRejectionMessage
       ? verificationState.message
       : "";
   const visibleStepRejectionMessage = localRejectionMessage || serverRejectionMessage;
+  const visiblePasswordMessage = passwordState.status === "rejected" ? passwordState.message : "";
 
   const handleSectionToggle = (id: string, isOpen: boolean) => {
     setExpandedSections((prev) => ({ ...prev, [id]: isOpen }));
@@ -148,7 +156,7 @@ export default function FoodDrinkPageClient({
     }
 
     if (isRejectedBackground(selectedBackground)) {
-      setLocalRejectionMessage("We couldn't verify this cultural background. Please try another option.");
+      setLocalRejectionMessage("We couldn't confirm this request came from a genuine visitor. Please try again.");
       setHideServerRejectionMessage(true);
       return;
     }
@@ -167,7 +175,7 @@ export default function FoodDrinkPageClient({
   const handleCompanySubmit = (event: React.FormEvent<HTMLFormElement>) => {
     if (isRejectedCompany(company)) {
       event.preventDefault();
-      setLocalRejectionMessage("We couldn't verify this company. Please review the entry and try again.");
+      setLocalRejectionMessage("We couldn't confirm this request came from a genuine visitor. Please try again.");
       setHideServerRejectionMessage(true);
       return;
     }
@@ -191,9 +199,48 @@ export default function FoodDrinkPageClient({
           </div>
 
           {isTechnicallyRejected ? (
-            <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200">
-              <p className="font-semibold">Access unavailable.</p>
-              <p className="mt-2 text-sm">{rejectionMessage}</p>
+            <div className="space-y-5">
+              <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200">
+                <p className="font-semibold">Access unavailable.</p>
+                <p className="mt-2 text-sm">{rejectionMessage}</p>
+              </div>
+
+              {passwordBypassEnabled ? (
+                <div className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-white/10 dark:bg-white/5">
+                  <p className="text-sm leading-6 text-slate-600 dark:text-neutral-300">
+                    Enter the access code to continue.
+                  </p>
+
+                  {visiblePasswordMessage ? (
+                    <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200">
+                      <p className="font-semibold">Unable to continue.</p>
+                      <p className="mt-2 text-sm">{visiblePasswordMessage}</p>
+                    </div>
+                  ) : null}
+
+                  <form action={passwordFormAction} className="space-y-4">
+                    <label className="block space-y-2">
+                      <span className="text-sm font-medium text-slate-700 dark:text-neutral-200">Access code</span>
+                      <input
+                        name="password"
+                        type="password"
+                        required
+                        autoComplete="current-password"
+                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500 dark:border-white/10 dark:bg-white/5 dark:text-white"
+                        placeholder="Enter access code"
+                      />
+                    </label>
+
+                    <button
+                      type="submit"
+                      disabled={isPasswordPending}
+                      className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-900 px-4 py-3 font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
+                    >
+                      {isPasswordPending ? "Verifying…" : "Use access code"}
+                    </button>
+                  </form>
+                </div>
+              ) : null}
             </div>
           ) : (
             <div className="space-y-5">
@@ -285,6 +332,52 @@ export default function FoodDrinkPageClient({
                   </div>
                 </form>
               )}
+
+              {passwordBypassEnabled ? (
+                <>
+                  <div className="relative py-2">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-slate-200 dark:border-white/10" />
+                    </div>
+                    <div className="relative flex justify-center">
+                      <span className="bg-white px-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400 dark:bg-neutral-900 dark:text-neutral-500">
+                        Or use access code
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-white/10 dark:bg-white/5">
+                    {visiblePasswordMessage ? (
+                      <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200">
+                        <p className="font-semibold">Unable to continue.</p>
+                        <p className="mt-2 text-sm">{visiblePasswordMessage}</p>
+                      </div>
+                    ) : null}
+
+                    <form action={passwordFormAction} className="space-y-4">
+                      <label className="block space-y-2">
+                        <span className="text-sm font-medium text-slate-700 dark:text-neutral-200">Access code</span>
+                        <input
+                          name="password"
+                          type="password"
+                          required
+                          autoComplete="current-password"
+                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500 dark:border-white/10 dark:bg-white/5 dark:text-white"
+                          placeholder="Enter access code"
+                        />
+                      </label>
+
+                      <button
+                        type="submit"
+                        disabled={isPasswordPending}
+                        className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-900 px-4 py-3 font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
+                      >
+                        {isPasswordPending ? "Verifying…" : "Use access code"}
+                      </button>
+                    </form>
+                  </div>
+                </>
+              ) : null}
             </div>
           )}
         </div>

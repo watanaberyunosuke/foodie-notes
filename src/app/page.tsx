@@ -7,6 +7,7 @@ export default async function Page() {
   const requestHeaders = await headers();
   const cookieStore = await cookies();
   const items = await getFoodDrinkItems();
+  const passwordBypassEnabled = Boolean(process.env.ACCESS_BYPASS_PASSWORD?.trim());
   const cachedVerification = cookieStore.get(ACCESS_VERIFICATION_COOKIE)?.value;
   const verificationStatus: VerificationStatus =
     cachedVerification === "granted" || cachedVerification === "rejected"
@@ -19,6 +20,7 @@ export default async function Page() {
       initialCountryCode={requestHeaders.get("x-vercel-ip-country") ?? requestHeaders.get("cf-ipcountry")}
       initialAcceptLanguage={requestHeaders.get("accept-language")}
       initialVerificationStatus={verificationStatus}
+      passwordBypassEnabled={passwordBypassEnabled}
     />
   );
 }
