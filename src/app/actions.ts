@@ -32,7 +32,7 @@ export async function verifyUserAccess(
 
     return {
       status: "rejected",
-      message: "Cultural background rejected.",
+      message: "We couldn't verify this cultural background. Please try another option.",
     };
   }
 
@@ -42,7 +42,7 @@ export async function verifyUserAccess(
 
     return {
       status: "rejected",
-      message: "Company rejected.",
+      message: "We couldn't verify this company. Please review the entry and try again.",
     };
   }
 

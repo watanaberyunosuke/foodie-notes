@@ -148,7 +148,7 @@ export default function FoodDrinkPageClient({
     }
 
     if (isRejectedBackground(selectedBackground)) {
-      setLocalRejectionMessage("Cultural background rejected.");
+      setLocalRejectionMessage("We couldn't verify this cultural background. Please try another option.");
       setHideServerRejectionMessage(true);
       return;
     }
@@ -167,7 +167,7 @@ export default function FoodDrinkPageClient({
   const handleCompanySubmit = (event: React.FormEvent<HTMLFormElement>) => {
     if (isRejectedCompany(company)) {
       event.preventDefault();
-      setLocalRejectionMessage("Company rejected.");
+      setLocalRejectionMessage("We couldn't verify this company. Please review the entry and try again.");
       setHideServerRejectionMessage(true);
       return;
     }
@@ -199,7 +199,7 @@ export default function FoodDrinkPageClient({
             <div className="space-y-5">
               {visibleStepRejectionMessage ? (
                 <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200">
-                  <p className="font-semibold">Rejected.</p>
+                  <p className="font-semibold">Unable to continue.</p>
                   <p className="mt-2 text-sm">{visibleStepRejectionMessage}</p>
                 </div>
               ) : null}
