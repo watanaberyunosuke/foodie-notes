@@ -1,5 +1,5 @@
 import { getFoodDrinkItems } from "@/lib/db";
-import { ACCESS_VERIFICATION_COOKIE, type VerificationStatus } from "@/lib/access-control";
+import { ACCESS_VERIFICATION_COOKIE, type VerificationStatus } from "@/middleware/access-control";
 import { cookies, headers } from "next/headers";
 import FoodDrinkPageClient from "./FoodDrinkPageClient";
 

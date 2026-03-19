@@ -4,7 +4,7 @@
 import { verifyUserAccess, type VerificationState } from "./actions";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ToggleSection } from "@/components/ToggleSection";
-import { isBlockedCountryCode, isBlockedLanguage, type VerificationStatus } from "@/lib/access-control";
+import { isBlockedCountryCode, isBlockedLanguage, type VerificationStatus } from "@/middleware/access-control";
 import { useActionState, useMemo, useState } from "react";
 
 type FoodDrinkItem = {

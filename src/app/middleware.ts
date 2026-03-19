@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { shouldRejectRequest } from "@/lib/access-control";
-
+import { shouldRejectRequest } from "@/middleware/access-control";
 export function appMiddleware(request: NextRequest) {
   if (shouldRejectRequest(request.headers)) {
     return new NextResponse("Entry rejected.", {

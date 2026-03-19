@@ -6,7 +6,7 @@ import {
   ACCESS_VERIFICATION_COOKIE,
   isAllowedVerifiedBackground,
   type VerificationStatus,
-} from "@/lib/access-control";
+} from "@/middleware/access-control";
 
 export type VerificationState = {
   message: string;
