@@ -1,16 +1,3 @@
-export const VERIFIED_BACKGROUND_OPTIONS = [
-  "Poland",
-  "Polish",
-  "Mainland China",
-  "China",
-  "Chinese",
-  "Simplified Chinese",
-  "North Korea",
-  "North Korean",
-  "DPRK",
-  "Democratic People's Republic of Korea",
-];
-
 const VERIFIED_BACKGROUND_TOKENS = [
   "poland",
   "polish",
