@@ -1,21 +1,30 @@
 // src/app/FoodDrinkPageClient.tsx
 "use client";
 
+import { useRouter } from "next/navigation";
+import { verifyPasswordBypass, verifyUserAccess, type VerificationState } from "./actions";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ToggleSection } from "@/components/ToggleSection";
-import { useState } from "react";
+import { COUNTRY_OPTIONS } from "@/lib/countries";
+import {
+  isBlockedCountryCode,
+  isBlockedLanguage,
+  isRejectedBackground,
+  isRejectedCompany,
+  type VerificationStatus,
+} from "@/middleware/access-control";
+import { useActionState, useMemo, useState } from "react";
 
 type FoodDrinkItem = {
   id: string | number;
   name: string;
   city?: string;
-  location?: string;
-  cuisine?: string;
-  website?: string;
-  hats?: string | number;
-  price_range_per_head?: string;
-  comment?: string;
-  // allow raw CSV keys too
+  location?: string | null;
+  cuisine?: string | null;
+  website?: string | null;
+  hats?: string | number | null;
+  price_range_per_head?: string | null;
+  comment?: string | null;
   Cusine?: string;
   Hats?: string | number;
   Comment?: string;
@@ -24,12 +33,60 @@ type FoodDrinkItem = {
 
 type Props = {
   items: FoodDrinkItem[];
+  initialCountryCode?: string | null;
+  initialAcceptLanguage?: string | null;
+  initialVerificationStatus: VerificationStatus;
+  passwordBypassEnabled: boolean;
 };
 
-export default function FoodDrinkPageClient({ items }: Readonly<Props>) {
+function getInitialVerificationState(status: VerificationStatus): VerificationState {
+  if (status === "granted") {
+    return { status, message: "Access granted." };
+  }
+
+  if (status === "rejected") {
+    return { status: "pending", message: "" };
+  }
+
+  return { status: "pending", message: "" };
+}
+
+export default function FoodDrinkPageClient({
+  items,
+  initialCountryCode,
+  initialAcceptLanguage,
+  initialVerificationStatus,
+  passwordBypassEnabled,
+}: Readonly<Props>) {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [cuisineFilter, setCuisineFilter] = useState("");
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+  const [verificationStep, setVerificationStep] = useState<"background" | "company">("background");
+  const [selectedBackground, setSelectedBackground] = useState("");
+  const [company, setCompany] = useState("");
+  const [localRejectionMessage, setLocalRejectionMessage] = useState("");
+  const [hideServerRejectionMessage, setHideServerRejectionMessage] = useState(false);
+  const initialVerificationState = getInitialVerificationState(initialVerificationStatus);
+  const [verificationState, formAction, isPending] = useActionState(
+    verifyUserAccess,
+    initialVerificationState,
+  );
+  const [passwordState, passwordFormAction, isPasswordPending] = useActionState(
+    verifyPasswordBypass,
+    initialVerificationState,
+  );
+  const isTechnicallyRejected =
+    isBlockedCountryCode(initialCountryCode) || isBlockedLanguage(initialAcceptLanguage);
+  const accessGranted =
+    verificationState.status === "granted" || passwordState.status === "granted";
+  const rejectionMessage = "Access is unavailable.";
+  const serverRejectionMessage =
+    verificationState.status === "rejected" && !hideServerRejectionMessage
+      ? verificationState.message
+      : "";
+  const visibleStepRejectionMessage = localRejectionMessage || serverRejectionMessage;
+  const visiblePasswordMessage = passwordState.status === "rejected" ? passwordState.message : "";
 
   const handleSectionToggle = (id: string, isOpen: boolean) => {
     setExpandedSections((prev) => ({ ...prev, [id]: isOpen }));
@@ -40,14 +97,14 @@ export default function FoodDrinkPageClient({ items }: Readonly<Props>) {
     new Set(
       items
         .map((i) => (i.cuisine || i.Cusine || "").trim())
-        .filter((c) => c !== "" && c !== "—")
-    )
+        .filter((c) => c !== "" && c !== "—"),
+    ),
   ).sort((a, b) => a.localeCompare(b));
 
   const filteredItems = items.filter((item) => {
     const itemCuisine = (item.cuisine || item.Cusine || "").trim();
     const matchesCuisine = !cuisineFilter || itemCuisine === cuisineFilter;
-    
+
     if (!matchesCuisine) return false;
 
     if (!searchQuery) return true;
@@ -61,14 +118,273 @@ export default function FoodDrinkPageClient({ items }: Readonly<Props>) {
 
   const melbourne = filteredItems.filter((i) => i.city === "Melbourne");
   const sydney = filteredItems.filter((i) => (i.city ?? "").toLowerCase() === "sydney");
-  const adelaide = filteredItems.filter(
-    (i) => i.city === "Adelaide" || i.city === "Adelaide SA"
+  const adelaide = filteredItems.filter((i) => i.city === "Adelaide" || i.city === "Adelaide SA");
+
+  const tocItems = useMemo(
+    () => [
+      { id: "melbourne", label: "Melbourne / Victoria", count: melbourne.length },
+      { id: "sydney", label: "Sydney / NSW", count: sydney.length },
+      { id: "adelaide", label: "Adelaide / SA", count: adelaide.length },
+    ],
+    [adelaide.length, melbourne.length, sydney.length],
   );
 
   const formatUrlText = (url: string) => {
     if (!url) return "";
     return url.replace(/^https?:\/\//, "").replace(/\/$/, "");
   };
+
+  const handleScrollTo = (id: string) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const handleBackgroundChange = (value: string) => {
+    setSelectedBackground(value);
+    setLocalRejectionMessage("");
+    setHideServerRejectionMessage(true);
+  };
+
+  const handleCompanyChange = (value: string) => {
+    setCompany(value);
+    setLocalRejectionMessage("");
+    setHideServerRejectionMessage(true);
+  };
+
+  const handleBackgroundContinue = () => {
+    if (!selectedBackground) {
+      return;
+    }
+
+    if (isRejectedBackground(selectedBackground)) {
+      router.push(`/access-unavailable?background=${encodeURIComponent(selectedBackground)}`);
+      return;
+    }
+
+    setLocalRejectionMessage("");
+    setHideServerRejectionMessage(true);
+    setVerificationStep("company");
+  };
+
+  const handleBackToBackground = () => {
+    setVerificationStep("background");
+    setLocalRejectionMessage("");
+    setHideServerRejectionMessage(true);
+  };
+
+  const handleCompanySubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    if (isRejectedCompany(company)) {
+      event.preventDefault();
+      setLocalRejectionMessage("We couldn't confirm this request came from a genuine visitor. Please try again.");
+      setHideServerRejectionMessage(true);
+      return;
+    }
+
+    setLocalRejectionMessage("");
+    setHideServerRejectionMessage(false);
+  };
+
+  if (!accessGranted) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-6 py-16 dark:bg-neutral-950">
+        <div className="w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-8 shadow-xl dark:border-white/10 dark:bg-neutral-900">
+          <div className="mb-6 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-neutral-500">
+                Private access
+              </p>
+              <h1 className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">Access required</h1>
+            </div>
+            <ThemeToggle />
+          </div>
+
+          {isTechnicallyRejected ? (
+            <div className="space-y-5">
+              <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200">
+                <p className="font-semibold">Access unavailable.</p>
+                <p className="mt-2 text-sm">{rejectionMessage}</p>
+              </div>
+
+              {passwordBypassEnabled ? (
+                <div className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-white/10 dark:bg-white/5">
+                  <p className="text-sm leading-6 text-slate-600 dark:text-neutral-300">
+                    Enter the access code to continue.
+                  </p>
+
+                  {visiblePasswordMessage ? (
+                    <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200">
+                      <p className="font-semibold">Unable to continue.</p>
+                      <p className="mt-2 text-sm">{visiblePasswordMessage}</p>
+                    </div>
+                  ) : null}
+
+                  <form action={passwordFormAction} className="space-y-4">
+                    <label className="block space-y-2">
+                      <span className="text-sm font-medium text-slate-700 dark:text-neutral-200">Access code</span>
+                      <input
+                        name="password"
+                        type="password"
+                        required
+                        autoComplete="current-password"
+                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500 dark:border-white/10 dark:bg-white/5 dark:text-white"
+                        placeholder="Enter access code"
+                      />
+                    </label>
+
+                    <button
+                      type="submit"
+                      disabled={isPasswordPending}
+                      className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-900 px-4 py-3 font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
+                    >
+                      {isPasswordPending ? "Verifying…" : "Use access code"}
+                    </button>
+                  </form>
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <div className="space-y-5">
+              {visibleStepRejectionMessage ? (
+                <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200">
+                  <p className="font-semibold">Unable to continue.</p>
+                  <p className="mt-2 text-sm">{visibleStepRejectionMessage}</p>
+                </div>
+              ) : null}
+
+              {verificationStep === "background" ? (
+                <>
+                  <p className="text-sm leading-6 text-slate-600 dark:text-neutral-300">
+                    Step 1 of 2. Select your cultural background to continue.
+                  </p>
+
+                  <label className="block space-y-2">
+                    <span className="text-sm font-medium text-slate-700 dark:text-neutral-200">Cultural background</span>
+                    <select
+                      name="background"
+                      required
+                      value={selectedBackground}
+                      onChange={(event) => handleBackgroundChange(event.target.value)}
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500 dark:border-white/10 dark:bg-white/5 dark:text-white"
+                    >
+                      <option value="" disabled>
+                        Select one
+                      </option>
+                      {COUNTRY_OPTIONS.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <button
+                    type="button"
+                    disabled={!selectedBackground}
+                    onClick={handleBackgroundContinue}
+                    className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-900 px-4 py-3 font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
+                  >
+                    Continue
+                  </button>
+                </>
+              ) : (
+                <form action={formAction} onSubmit={handleCompanySubmit} className="space-y-5">
+                  <input type="hidden" name="background" value={selectedBackground} />
+
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 dark:border-white/10 dark:bg-white/5">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-neutral-400">
+                      Step 1 complete
+                    </p>
+                    <p className="mt-2 text-sm text-slate-700 dark:text-neutral-200">{selectedBackground}</p>
+                  </div>
+
+                  <p className="text-sm leading-6 text-slate-600 dark:text-neutral-300">
+                    Step 2 of 2. Enter your company to continue.
+                  </p>
+
+                  <label className="block space-y-2">
+                    <span className="text-sm font-medium text-slate-700 dark:text-neutral-200">Company</span>
+                    <input
+                      name="company"
+                      type="text"
+                      required
+                      value={company}
+                      onChange={(event) => handleCompanyChange(event.target.value)}
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500 dark:border-white/10 dark:bg-white/5 dark:text-white"
+                      placeholder="Enter company"
+                    />
+                  </label>
+
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={handleBackToBackground}
+                      className="inline-flex flex-1 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 font-semibold text-slate-900 transition hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
+                    >
+                      Back
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isPending || !company.trim()}
+                      className="inline-flex flex-1 items-center justify-center rounded-2xl bg-slate-900 px-4 py-3 font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
+                    >
+                      {isPending ? "Verifying…" : "Verify and continue"}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {passwordBypassEnabled ? (
+                <>
+                  <div className="relative py-2">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-slate-200 dark:border-white/10" />
+                    </div>
+                    <div className="relative flex justify-center">
+                      <span className="bg-white px-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400 dark:bg-neutral-900 dark:text-neutral-500">
+                        Or use access code
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-white/10 dark:bg-white/5">
+                    {visiblePasswordMessage ? (
+                      <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200">
+                        <p className="font-semibold">Unable to continue.</p>
+                        <p className="mt-2 text-sm">{visiblePasswordMessage}</p>
+                      </div>
+                    ) : null}
+
+                    <form action={passwordFormAction} className="space-y-4">
+                      <label className="block space-y-2">
+                        <span className="text-sm font-medium text-slate-700 dark:text-neutral-200">Access code</span>
+                        <input
+                          name="password"
+                          type="password"
+                          required
+                          autoComplete="current-password"
+                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500 dark:border-white/10 dark:bg-white/5 dark:text-white"
+                          placeholder="Enter access code"
+                        />
+                      </label>
+
+                      <button
+                        type="submit"
+                        disabled={isPasswordPending}
+                        className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-900 px-4 py-3 font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
+                      >
+                        {isPasswordPending ? "Verifying…" : "Use access code"}
+                      </button>
+                    </form>
+                  </div>
+                </>
+              ) : null}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   const renderTable = (rows: FoodDrinkItem[]) => {
     if (!rows.length) {
@@ -84,15 +400,7 @@ export default function FoodDrinkPageClient({ items }: Readonly<Props>) {
         <table className="min-w-full border-collapse text-sm text-left">
           <thead className="border-b border-slate-200 dark:border-neutral-800 bg-slate-50/50 dark:bg-neutral-900/50">
             <tr>
-              {[
-                "Name",
-                "Location",
-                "Cuisine",
-                "Website",
-                "Hats",
-                "Price",
-                "Notes",
-              ].map((col) => (
+              {["Name", "Location", "Cuisine", "Website", "Hats", "Price", "Notes"].map((col) => (
                 <th
                   key={col}
                   className="whitespace-nowrap px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-neutral-500"
@@ -109,14 +417,10 @@ export default function FoodDrinkPageClient({ items }: Readonly<Props>) {
                 key={item.id}
                 className="group align-top hover:bg-slate-50 dark:hover:bg-neutral-800/50 transition-colors duration-200"
               >
-                <td className="px-4 py-3 font-semibold text-slate-900 dark:text-neutral-100 min-w-48">
-                  {item.name}
-                </td>
+                <td className="px-4 py-3 font-semibold text-slate-900 dark:text-neutral-100 min-w-48">{item.name}</td>
 
                 <td className="px-4 py-3 text-slate-600 dark:text-neutral-400">
-                  <div className="flex items-center gap-1.5">
-                    {item.location || "—"}
-                  </div>
+                  <div className="flex items-center gap-1.5">{item.location || "—"}</div>
                 </td>
 
                 <td className="px-4 py-3">
@@ -142,10 +446,8 @@ export default function FoodDrinkPageClient({ items }: Readonly<Props>) {
                 </td>
 
                 <td className="px-4 py-3">
-                  {(item.hats ?? item.Hats) ? (
-                    <span className="font-semibold text-slate-700 dark:text-neutral-300">
-                      {item.hats ?? item.Hats} Hats
-                    </span>
+                  {item.hats ?? item.Hats ? (
+                    <span className="font-semibold text-slate-700 dark:text-neutral-300">{item.hats ?? item.Hats} Hats</span>
                   ) : (
                     <span className="text-slate-400 dark:text-neutral-500">—</span>
                   )}
@@ -166,22 +468,8 @@ export default function FoodDrinkPageClient({ items }: Readonly<Props>) {
     );
   };
 
-  // Table of contents entries
-  const tocItems = [
-    { id: "melbourne", label: "Melbourne / Victoria", count: melbourne.length },
-    { id: "sydney", label: "Sydney / NSW", count: sydney.length },
-    { id: "adelaide", label: "Adelaide / SA", count: adelaide.length },
-  ];
-
-  const handleScrollTo = (id: string) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
   return (
     <div className="flex min-h-screen bg-transparent font-sans selection:bg-cyan-200 selection:text-cyan-900 dark:selection:bg-cyan-900 dark:selection:text-cyan-100">
-      {/* TOC Fluid Sidebar */}
       <aside
         className={`sticky top-0 h-screen shrink-0 border-r border-slate-200/50 dark:border-white/5 bg-white/60 dark:bg-neutral-900/50 backdrop-blur-3xl transition-all duration-800 ease-[cubic-bezier(0.16,1,0.3,1)] flex flex-col z-20 ${
           isAnySectionExpanded
@@ -211,13 +499,12 @@ export default function FoodDrinkPageClient({ items }: Readonly<Props>) {
         </div>
       </aside>
 
-      {/* Main Content Area */}
-      <main className={`flex-1 w-full min-w-0 transition-all duration-800 ease-[cubic-bezier(0.16,1,0.3,1)] relative z-10 ${
+      <main
+        className={`flex-1 w-full min-w-0 transition-all duration-800 ease-[cubic-bezier(0.16,1,0.3,1)] relative z-10 ${
           isAnySectionExpanded ? "max-w-7xl mx-auto" : ""
         }`}
       >
         <div className="mx-auto max-w-5xl px-6 sm:px-12 py-16 sm:py-24 space-y-16">
-          {/* Header */}
           <header className="flex flex-col gap-6">
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
@@ -235,7 +522,6 @@ export default function FoodDrinkPageClient({ items }: Readonly<Props>) {
             </div>
           </header>
 
-          {/* Search & Filter */}
           <div className="flex flex-col sm:flex-row gap-5 relative z-10 w-full mb-10">
             <div className="flex-1 relative group">
               <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none transition-transform group-focus-within:scale-110 group-focus-within:text-cyan-500">
@@ -305,8 +591,7 @@ export default function FoodDrinkPageClient({ items }: Readonly<Props>) {
               onToggle={(isOpen) => handleSectionToggle("adelaide", isOpen)}
               description={
                 <p className="text-sm text-slate-500 dark:text-slate-400">
-                  Data where <code>city = &quot;Adelaide&quot;</code> or{" "}
-                  <code>&quot;Adelaide SA&quot;</code>.
+                  Data where <code>city = &quot;Adelaide&quot;</code> or <code>&quot;Adelaide SA&quot;</code>.
                 </p>
               }
             >

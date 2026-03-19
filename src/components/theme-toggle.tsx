@@ -1,17 +1,29 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+
+const emptySubscribe = () => () => {};
 
 export function ThemeToggle() {
-  const { theme, setTheme, systemTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
+  const { theme, setTheme, resolvedTheme, systemTheme } = useTheme();
+  const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
 
-  // Avoid hydration mismatch
-  useEffect(() => setMounted(true), []);
-  if (!mounted) return null;
+  if (!mounted) {
+    return (
+      <button
+        type="button"
+        disabled
+        className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white/80 px-3 py-1 text-sm text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-100"
+        aria-label="Toggle dark mode"
+      >
+        <span className="text-lg">•</span>
+        <span>Theme</span>
+      </button>
+    );
+  }
 
-  const currentTheme = theme === "system" ? systemTheme : theme;
+  const currentTheme = theme === "system" ? resolvedTheme ?? systemTheme ?? "light" : theme ?? "light";
   const isDark = currentTheme === "dark";
 
   return (
