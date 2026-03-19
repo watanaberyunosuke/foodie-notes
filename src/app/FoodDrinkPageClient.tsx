@@ -6,8 +6,10 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { ToggleSection } from "@/components/ToggleSection";
 import { COUNTRY_OPTIONS } from "@/lib/countries";
 import {
+  isAllowedVerifiedBackground,
   isBlockedCountryCode,
   isBlockedLanguage,
+  isRejectedCompany,
   type VerificationStatus,
 } from "@/middleware/access-control";
 import { useActionState, useMemo, useState } from "react";
@@ -41,7 +43,7 @@ function getInitialVerificationState(status: VerificationStatus): VerificationSt
   }
 
   if (status === "rejected") {
-    return { status, message: "Access is unavailable." };
+    return { status: "pending", message: "" };
   }
 
   return { status: "pending", message: "" };
@@ -56,6 +58,11 @@ export default function FoodDrinkPageClient({
   const [searchQuery, setSearchQuery] = useState("");
   const [cuisineFilter, setCuisineFilter] = useState("");
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+  const [verificationStep, setVerificationStep] = useState<"background" | "company">("background");
+  const [selectedBackground, setSelectedBackground] = useState("");
+  const [company, setCompany] = useState("");
+  const [localRejectionMessage, setLocalRejectionMessage] = useState("");
+  const [hideServerRejectionMessage, setHideServerRejectionMessage] = useState(false);
   const initialVerificationState = getInitialVerificationState(initialVerificationStatus);
   const [verificationState, formAction, isPending] = useActionState(
     verifyUserAccess,
@@ -65,6 +72,11 @@ export default function FoodDrinkPageClient({
     isBlockedCountryCode(initialCountryCode) || isBlockedLanguage(initialAcceptLanguage);
   const accessGranted = !isTechnicallyRejected && verificationState.status === "granted";
   const rejectionMessage = "Access is unavailable.";
+  const serverRejectionMessage =
+    verificationState.status === "rejected" && !hideServerRejectionMessage
+      ? verificationState.message
+      : "";
+  const visibleStepRejectionMessage = localRejectionMessage || serverRejectionMessage;
 
   const handleSectionToggle = (id: string, isOpen: boolean) => {
     setExpandedSections((prev) => ({ ...prev, [id]: isOpen }));
@@ -118,6 +130,52 @@ export default function FoodDrinkPageClient({
     el.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  const handleBackgroundChange = (value: string) => {
+    setSelectedBackground(value);
+    setLocalRejectionMessage("");
+    setHideServerRejectionMessage(true);
+  };
+
+  const handleCompanyChange = (value: string) => {
+    setCompany(value);
+    setLocalRejectionMessage("");
+    setHideServerRejectionMessage(true);
+  };
+
+  const handleBackgroundContinue = () => {
+    if (!selectedBackground) {
+      return;
+    }
+
+    if (!isAllowedVerifiedBackground(selectedBackground)) {
+      setLocalRejectionMessage("Cultural background rejected.");
+      setHideServerRejectionMessage(true);
+      return;
+    }
+
+    setLocalRejectionMessage("");
+    setHideServerRejectionMessage(true);
+    setVerificationStep("company");
+  };
+
+  const handleBackToBackground = () => {
+    setVerificationStep("background");
+    setLocalRejectionMessage("");
+    setHideServerRejectionMessage(true);
+  };
+
+  const handleCompanySubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    if (isRejectedCompany(company)) {
+      event.preventDefault();
+      setLocalRejectionMessage("Company rejected.");
+      setHideServerRejectionMessage(true);
+      return;
+    }
+
+    setLocalRejectionMessage("");
+    setHideServerRejectionMessage(false);
+  };
+
   if (!accessGranted) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 px-6 py-16 dark:bg-neutral-950">
@@ -132,44 +190,102 @@ export default function FoodDrinkPageClient({
             <ThemeToggle />
           </div>
 
-          {isTechnicallyRejected || verificationState.status === "rejected" ? (
+          {isTechnicallyRejected ? (
             <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200">
               <p className="font-semibold">Access unavailable.</p>
               <p className="mt-2 text-sm">{rejectionMessage}</p>
             </div>
           ) : (
-            <form action={formAction} className="space-y-5">
-              <p className="text-sm leading-6 text-slate-600 dark:text-neutral-300">
-                Select your country to continue.
-              </p>
+            <div className="space-y-5">
+              {visibleStepRejectionMessage ? (
+                <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200">
+                  <p className="font-semibold">Rejected.</p>
+                  <p className="mt-2 text-sm">{visibleStepRejectionMessage}</p>
+                </div>
+              ) : null}
 
-              <label className="block space-y-2">
-                <span className="text-sm font-medium text-slate-700 dark:text-neutral-200">Country</span>
-                <select
-                  name="background"
-                  required
-                  defaultValue=""
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500 dark:border-white/10 dark:bg-white/5 dark:text-white"
-                >
-                  <option value="" disabled>
-                    Select one
-                  </option>
-                  {COUNTRY_OPTIONS.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              {verificationStep === "background" ? (
+                <>
+                  <p className="text-sm leading-6 text-slate-600 dark:text-neutral-300">
+                    Step 1 of 2. Select your cultural background to continue.
+                  </p>
 
-              <button
-                type="submit"
-                disabled={isPending}
-                className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-900 px-4 py-3 font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
-              >
-                {isPending ? "Verifying…" : "Verify and continue"}
-              </button>
-            </form>
+                  <label className="block space-y-2">
+                    <span className="text-sm font-medium text-slate-700 dark:text-neutral-200">Cultural background</span>
+                    <select
+                      name="background"
+                      required
+                      value={selectedBackground}
+                      onChange={(event) => handleBackgroundChange(event.target.value)}
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500 dark:border-white/10 dark:bg-white/5 dark:text-white"
+                    >
+                      <option value="" disabled>
+                        Select one
+                      </option>
+                      {COUNTRY_OPTIONS.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <button
+                    type="button"
+                    disabled={!selectedBackground}
+                    onClick={handleBackgroundContinue}
+                    className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-900 px-4 py-3 font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
+                  >
+                    Continue
+                  </button>
+                </>
+              ) : (
+                <form action={formAction} onSubmit={handleCompanySubmit} className="space-y-5">
+                  <input type="hidden" name="background" value={selectedBackground} />
+
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 dark:border-white/10 dark:bg-white/5">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-neutral-400">
+                      Step 1 complete
+                    </p>
+                    <p className="mt-2 text-sm text-slate-700 dark:text-neutral-200">{selectedBackground}</p>
+                  </div>
+
+                  <p className="text-sm leading-6 text-slate-600 dark:text-neutral-300">
+                    Step 2 of 2. Enter your company to continue.
+                  </p>
+
+                  <label className="block space-y-2">
+                    <span className="text-sm font-medium text-slate-700 dark:text-neutral-200">Company</span>
+                    <input
+                      name="company"
+                      type="text"
+                      required
+                      value={company}
+                      onChange={(event) => handleCompanyChange(event.target.value)}
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500 dark:border-white/10 dark:bg-white/5 dark:text-white"
+                      placeholder="Enter company"
+                    />
+                  </label>
+
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={handleBackToBackground}
+                      className="inline-flex flex-1 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 font-semibold text-slate-900 transition hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
+                    >
+                      Back
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isPending || !company.trim()}
+                      className="inline-flex flex-1 items-center justify-center rounded-2xl bg-slate-900 px-4 py-3 font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
+                    >
+                      {isPending ? "Verifying…" : "Verify and continue"}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
           )}
         </div>
       </div>

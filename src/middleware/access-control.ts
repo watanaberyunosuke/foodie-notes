@@ -14,6 +14,7 @@ const VERIFIED_BACKGROUND_TOKENS = [
 
 const BLOCKED_COUNTRY_CODES = new Set(["PL", "CN", "KP"]);
 const BLOCKED_LANGUAGE_PREFIXES = ["pl", "zh", "zh-cn", "ko-kp"];
+const BLOCKED_COMPANY_TOKENS = ["betashares", "halo labs"];
 
 export const ACCESS_VERIFICATION_COOKIE = "foodie-notes-access-verification";
 
@@ -39,6 +40,10 @@ function matchesToken(value: MaybeString, tokens: string[]) {
 
 export function isAllowedVerifiedBackground(value: MaybeString) {
   return matchesToken(value, VERIFIED_BACKGROUND_TOKENS);
+}
+
+export function isRejectedCompany(value: MaybeString) {
+  return matchesToken(value, BLOCKED_COMPANY_TOKENS);
 }
 
 export function isBlockedCountryCode(value: MaybeString) {

@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import {
   ACCESS_VERIFICATION_COOKIE,
   isAllowedVerifiedBackground,
+  isRejectedCompany,
   type VerificationStatus,
 } from "@/middleware/access-control";
 
@@ -13,30 +14,39 @@ export type VerificationState = {
   status: VerificationStatus;
 };
 
+function normalize(value: string | FormDataEntryValue | null) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
 export async function verifyUserAccess(
   _previousState: VerificationState,
   formData: FormData,
 ): Promise<VerificationState> {
-  const background = formData.get("background");
+  const background = normalize(formData.get("background"));
+  const company = normalize(formData.get("company"));
   const cookieStore = await cookies();
 
-  if (typeof background === "string" && isAllowedVerifiedBackground(background)) {
-    cookieStore.set(ACCESS_VERIFICATION_COOKIE, "granted", {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      maxAge: 60 * 60 * 24,
-    });
+  if (!isAllowedVerifiedBackground(background)) {
+    cookieStore.delete(ACCESS_VERIFICATION_COOKIE);
     revalidatePath("/");
 
     return {
-      status: "granted",
-      message: "Access granted.",
+      status: "rejected",
+      message: "Cultural background rejected.",
     };
   }
 
-  cookieStore.set(ACCESS_VERIFICATION_COOKIE, "rejected", {
+  if (!company || isRejectedCompany(company)) {
+    cookieStore.delete(ACCESS_VERIFICATION_COOKIE);
+    revalidatePath("/");
+
+    return {
+      status: "rejected",
+      message: "Company rejected.",
+    };
+  }
+
+  cookieStore.set(ACCESS_VERIFICATION_COOKIE, "granted", {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
@@ -46,7 +56,7 @@ export async function verifyUserAccess(
   revalidatePath("/");
 
   return {
-    status: "rejected",
-    message: "Access is unavailable.",
+    status: "granted",
+    message: "Access granted.",
   };
 }
