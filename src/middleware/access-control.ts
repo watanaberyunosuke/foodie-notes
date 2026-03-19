@@ -38,7 +38,7 @@ function matchesToken(value: MaybeString, tokens: string[]) {
   return normalized.length > 0 && tokens.some((token) => normalized.includes(token));
 }
 
-export function isAllowedVerifiedBackground(value: MaybeString) {
+export function isRejectedBackground(value: MaybeString) {
   return matchesToken(value, VERIFIED_BACKGROUND_TOKENS);
 }
 

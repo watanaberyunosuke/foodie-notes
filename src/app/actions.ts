@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import {
   ACCESS_VERIFICATION_COOKIE,
-  isAllowedVerifiedBackground,
+  isRejectedBackground,
   isRejectedCompany,
   type VerificationStatus,
 } from "@/middleware/access-control";
@@ -26,7 +26,7 @@ export async function verifyUserAccess(
   const company = normalize(formData.get("company"));
   const cookieStore = await cookies();
 
-  if (!isAllowedVerifiedBackground(background)) {
+  if (isRejectedBackground(background)) {
     cookieStore.delete(ACCESS_VERIFICATION_COOKIE);
     revalidatePath("/");
 

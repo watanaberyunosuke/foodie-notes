@@ -6,9 +6,9 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { ToggleSection } from "@/components/ToggleSection";
 import { COUNTRY_OPTIONS } from "@/lib/countries";
 import {
-  isAllowedVerifiedBackground,
   isBlockedCountryCode,
   isBlockedLanguage,
+  isRejectedBackground,
   isRejectedCompany,
   type VerificationStatus,
 } from "@/middleware/access-control";
@@ -147,7 +147,7 @@ export default function FoodDrinkPageClient({
       return;
     }
 
-    if (!isAllowedVerifiedBackground(selectedBackground)) {
+    if (isRejectedBackground(selectedBackground)) {
       setLocalRejectionMessage("Cultural background rejected.");
       setHideServerRejectionMessage(true);
       return;
