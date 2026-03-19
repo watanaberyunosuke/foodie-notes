@@ -25,6 +25,13 @@ function normalize(value: MaybeString) {
   return value?.trim().toLowerCase() ?? "";
 }
 
+function getPrimaryLanguageTag(value: MaybeString) {
+  return normalize(value)
+    .split(",")[0]
+    ?.split(";")[0]
+    ?.trim() ?? "";
+}
+
 function matchesToken(value: MaybeString, tokens: string[]) {
   const normalized = normalize(value);
   return normalized.length > 0 && tokens.some((token) => normalized.includes(token));
@@ -40,18 +47,13 @@ export function isBlockedCountryCode(value: MaybeString) {
 }
 
 export function isBlockedLanguage(value: MaybeString) {
-  const normalized = normalize(value);
-  if (!normalized) return false;
+  const primaryLanguageTag = getPrimaryLanguageTag(value);
+  if (!primaryLanguageTag) return false;
 
-  return normalized
-    .split(",")
-    .map((entry) => entry.split(";")[0]?.trim())
-    .filter(Boolean)
-    .some((entry) =>
-      BLOCKED_LANGUAGE_PREFIXES.some(
-        (blockedPrefix) => entry === blockedPrefix || entry.startsWith(`${blockedPrefix}-`),
-      ),
-    );
+  return BLOCKED_LANGUAGE_PREFIXES.some(
+    (blockedPrefix) =>
+      primaryLanguageTag === blockedPrefix || primaryLanguageTag.startsWith(`${blockedPrefix}-`),
+  );
 }
 
 export function shouldRejectRequest(headers: Headers) {
