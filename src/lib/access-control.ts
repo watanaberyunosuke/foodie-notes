@@ -1,22 +1,18 @@
-const VERIFIED_BACKGROUND_TOKENS = [
+const BLOCKED_COUNTRY_CODES = new Set(["PL", "CN", "KP"]);
+const BLOCKED_COUNTRY_TOKENS = [
   "poland",
   "polish",
   "mainland china",
   "china",
   "chinese",
-  "simplified chinese",
   "north korea",
   "north korean",
   "dprk",
   "democratic people's republic of korea",
   "democratic peoples republic of korea",
 ];
-const BLOCKED_COUNTRY_CODES = new Set(["PL", "CN", "KP"]);
 const BLOCKED_LANGUAGE_PREFIXES = ["pl", "zh", "zh-cn", "ko-kp"];
-
-export const ACCESS_VERIFICATION_COOKIE = "foodie-notes-access-verification";
-
-export type VerificationStatus = "pending" | "granted" | "rejected";
+const BLOCKED_COMPANY_TOKENS = ["betashares", "halo labs"];
 
 type MaybeString = string | null | undefined;
 
@@ -24,21 +20,12 @@ function normalize(value: MaybeString) {
   return value?.trim().toLowerCase() ?? "";
 }
 
-function matchesToken(value: MaybeString, tokens: string[]) {
+function matchesBlockedToken(value: MaybeString, blockedTokens: string[]) {
   const normalized = normalize(value);
-  return normalized.length > 0 && tokens.some((token) => normalized.includes(token));
+  return normalized.length > 0 && blockedTokens.some((token) => normalized.includes(token));
 }
 
-export function isAllowedVerifiedBackground(value: MaybeString) {
-  return matchesToken(value, VERIFIED_BACKGROUND_TOKENS);
-}
-
-export function isBlockedCountryCode(value: MaybeString) {
-  const normalized = normalize(value).toUpperCase();
-  return normalized ? BLOCKED_COUNTRY_CODES.has(normalized) : false;
-}
-
-export function isBlockedLanguage(value: MaybeString) {
+function matchesBlockedLanguage(value: MaybeString) {
   const normalized = normalize(value);
   if (!normalized) return false;
 
@@ -64,6 +51,25 @@ export function shouldRejectRequest(headers: Headers) {
     headers.get("x-forwarded-country"),
   ];
 
+  const profileHeaders = [
+    headers.get("x-user-country-name"),
+    headers.get("x-user-culture"),
+    headers.get("x-user-cultural-background"),
+    headers.get("x-user-ethnicity"),
+    headers.get("x-user-nationality"),
+    headers.get("x-user-origin"),
+  ];
+
+  const companyHeaders = [
+    headers.get("x-company"),
+    headers.get("x-user-company"),
+    headers.get("x-user-employer"),
+    headers.get("x-user-organization"),
+    headers.get("x-organization"),
+    headers.get("x-org-name"),
+    headers.get("x-forwarded-company"),
+  ];
+
   const languageHeaders = [
     headers.get("accept-language"),
     headers.get("x-user-language"),
@@ -71,5 +77,18 @@ export function shouldRejectRequest(headers: Headers) {
     headers.get("x-forwarded-language"),
   ];
 
-  return countryHeaders.some(isBlockedCountryCode) || languageHeaders.some(isBlockedLanguage);
+  const hasBlockedCountry = countryHeaders.some((value) => {
+    const normalized = normalize(value).toUpperCase();
+    return normalized ? BLOCKED_COUNTRY_CODES.has(normalized) : false;
+  });
+
+  const hasBlockedProfile = profileHeaders.some((value) =>
+    matchesBlockedToken(value, BLOCKED_COUNTRY_TOKENS),
+  );
+  const hasBlockedCompany = companyHeaders.some((value) =>
+    matchesBlockedToken(value, BLOCKED_COMPANY_TOKENS),
+  );
+  const hasBlockedLanguage = languageHeaders.some(matchesBlockedLanguage);
+
+  return hasBlockedCountry || hasBlockedProfile || hasBlockedCompany || hasBlockedLanguage;
 }
