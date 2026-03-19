@@ -32,7 +32,7 @@ export async function verifyUserAccess(
 
     return {
       status: "granted",
-      message: "Verification passed. Access granted.",
+      message: "Access granted.",
     };
   }
 
@@ -47,6 +47,6 @@ export async function verifyUserAccess(
 
   return {
     status: "rejected",
-    message: "Verification failed. Only listed countries or cultural backgrounds can pass.",
+    message: "Access is unavailable.",
   };
 }

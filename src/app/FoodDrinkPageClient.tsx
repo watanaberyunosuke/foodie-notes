@@ -32,11 +32,11 @@ type Props = {
 
 function getInitialVerificationState(status: VerificationStatus): VerificationState {
   if (status === "granted") {
-    return { status, message: "Cached verification found. Access granted." };
+    return { status, message: "Access granted." };
   }
 
   if (status === "rejected") {
-    return { status, message: "Cached verification found. Entry rejected." };
+    return { status, message: "Access is unavailable." };
   }
 
   return { status: "pending", message: "" };
@@ -56,21 +56,10 @@ export default function FoodDrinkPageClient({
     verifyUserAccess,
     initialVerificationState,
   );
-
-  const technicalRejectionReason = useMemo(() => {
-    if (isBlockedCountryCode(initialCountryCode)) {
-      return "Entry rejected because your IP resolves to a blocked country from the list.";
-    }
-
-    if (isBlockedLanguage(initialAcceptLanguage)) {
-      return "Entry rejected because your browser language matches a blocked language from the list.";
-    }
-
-    return "";
-  }, [initialAcceptLanguage, initialCountryCode]);
-
-  const accessGranted = !technicalRejectionReason && verificationState.status === "granted";
-  const rejectionMessage = technicalRejectionReason || verificationState.message;
+  const isTechnicallyRejected =
+    isBlockedCountryCode(initialCountryCode) || isBlockedLanguage(initialAcceptLanguage);
+  const accessGranted = !isTechnicallyRejected && verificationState.status === "granted";
+  const rejectionMessage = "Access is unavailable.";
 
   const handleSectionToggle = (id: string, isOpen: boolean) => {
     setExpandedSections((prev) => ({ ...prev, [id]: isOpen }));
@@ -131,22 +120,22 @@ export default function FoodDrinkPageClient({
           <div className="mb-6 flex items-center justify-between gap-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-neutral-500">
-                Cached + header + button verification
+                Private access
               </p>
-              <h1 className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">Access check required</h1>
+              <h1 className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">Access required</h1>
             </div>
             <ThemeToggle />
           </div>
 
-          {rejectionMessage ? (
+          {isTechnicallyRejected || verificationState.status === "rejected" ? (
             <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200">
-              <p className="font-semibold">Entry rejected.</p>
+              <p className="font-semibold">Access unavailable.</p>
               <p className="mt-2 text-sm">{rejectionMessage}</p>
             </div>
           ) : (
             <form action={formAction} className="space-y-5">
               <p className="text-sm leading-6 text-slate-600 dark:text-neutral-300">
-                To pass verification, confirm that you identify with one of the listed countries or cultural backgrounds. If you do not, entry is rejected. Header-based IP and language filtering still override this verification.
+                Select the option that best matches your background to continue.
               </p>
 
               <label className="block space-y-2">

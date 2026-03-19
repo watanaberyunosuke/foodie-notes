@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { shouldRejectRequest } from "@/middleware/access-control";
 export function appMiddleware(request: NextRequest) {
   if (shouldRejectRequest(request.headers)) {
-    return new NextResponse("Entry rejected.", {
+    return new NextResponse("Access unavailable.", {
       status: 403,
       headers: {
         "content-type": "text/plain; charset=utf-8",
