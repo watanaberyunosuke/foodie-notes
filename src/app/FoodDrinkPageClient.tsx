@@ -4,7 +4,12 @@
 import { verifyUserAccess, type VerificationState } from "./actions";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ToggleSection } from "@/components/ToggleSection";
-import { isBlockedCountryCode, isBlockedLanguage, type VerificationStatus } from "@/middleware/access-control";
+import {
+  VERIFIED_BACKGROUND_OPTIONS,
+  isBlockedCountryCode,
+  isBlockedLanguage,
+  type VerificationStatus,
+} from "@/middleware/access-control";
 import { useActionState, useMemo, useState } from "react";
 
 type FoodDrinkItem = {
@@ -138,6 +143,22 @@ export default function FoodDrinkPageClient({
                 Select the option that best matches your background to continue.
               </p>
 
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 dark:border-white/10 dark:bg-white/5">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-neutral-400">
+                  Available options
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {VERIFIED_BACKGROUND_OPTIONS.map((option) => (
+                    <span
+                      key={option}
+                      className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-200"
+                    >
+                      {option}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
               <label className="block space-y-2">
                 <span className="text-sm font-medium text-slate-700 dark:text-neutral-200">Country or cultural background</span>
                 <select
@@ -149,9 +170,11 @@ export default function FoodDrinkPageClient({
                   <option value="" disabled>
                     Select one
                   </option>
-                  <option value="Poland / Polish">Poland / Polish</option>
-                  <option value="Mainland China / Simplified Chinese">Mainland China / Simplified Chinese</option>
-                  <option value="North Korea">North Korea</option>
+                  {VERIFIED_BACKGROUND_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
                   <option value="Other">Other / not listed</option>
                 </select>
               </label>
