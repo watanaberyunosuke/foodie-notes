@@ -8,6 +8,14 @@ function normalize(value: string | null | undefined) {
   return value?.trim().toLowerCase() ?? "";
 }
 
+function isChinaExcludedRegion(value: string) {
+  return (
+    value.includes("hong kong") ||
+    value.includes("macau") ||
+    value.includes("taiwan")
+  );
+}
+
 const DEFAULT_REJECTION_CONTENT: RejectionContent = {
   title: "Unable to continue.",
   body: "We couldn't confirm this request came from a genuine visitor. Please try again.",
@@ -28,10 +36,7 @@ export function getCulturalBackgroundRejectionContent(value: string | null | und
     };
   }
 
-  if (
-    normalized.includes("china") ||
-    normalized.includes("chinese")
-  ) {
+  if ((normalized.includes("china") || normalized.includes("chinese")) && !isChinaExcludedRegion(normalized)) {
     return {
       title: "无法继续。",
       body: "我们无法确认此请求来自真实访客。请重试。",
