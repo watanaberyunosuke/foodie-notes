@@ -31,7 +31,7 @@ export function getCulturalBackgroundRejectionContent(value: string | null | und
   ) {
     return {
       title: "Nie możemy kontynuować.",
-      body: "Nie mogliśmy potwierdzić, że to żądanie pochodzi od prawdziwego użytkownika. Spróbuj ponownie.",
+      body: "Kurwa, suko, idź zjeść makaron truskawkowy i ssać rosyjskiego kutasa.",
       htmlLang: "pl",
     };
   }
