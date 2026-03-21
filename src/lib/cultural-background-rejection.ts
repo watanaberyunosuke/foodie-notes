@@ -45,7 +45,7 @@ export function getCulturalBackgroundRejectionContent(value: string | null | und
   }
 
   if (
-    normalized.includes("korea") ||
+    normalized.includes("north korea") ||
     normalized.includes("dprk") ||
     normalized.includes("democratic people's republic of korea") ||
     normalized.includes("democratic peoples republic of korea")
